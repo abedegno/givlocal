@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -41,9 +39,10 @@ async def list_inverter_settings(serial: str):
 @router.post("/inverter/{serial}/settings/{setting_id}/read")
 async def read_inverter_setting(serial: str, setting_id: int):
     """Read the current value of a setting from the in-memory register cache."""
+    from givenergy_modbus_async.model.register import HR
+
     from givenergy_local.main import app_state
     from givenergy_local.settings_map import convert_from_register_value, get_setting
-    from givenergy_modbus_async.model.register import HR
 
     inv_state = app_state.inverters.get(serial)
     if not inv_state:
@@ -81,15 +80,15 @@ async def read_inverter_setting(serial: str, setting_id: int):
 @router.post("/inverter/{serial}/settings/{setting_id}/write")
 async def write_inverter_setting(serial: str, setting_id: int, body: WriteSettingRequest):
     """Write a value to the inverter."""
+    from givenergy_modbus_async.model.inverter import Inverter
+    from givenergy_modbus_async.pdu import WriteHoldingRegisterRequest
+
     from givenergy_local.main import app_state
     from givenergy_local.settings_map import (
         convert_to_register_value,
         get_setting,
         validate_setting_value,
     )
-    from givenergy_modbus_async.model.inverter import Inverter
-    from givenergy_modbus_async.model.register import HR
-    from givenergy_modbus_async.pdu import WriteHoldingRegisterRequest
 
     inv_state = app_state.inverters.get(serial)
     if not inv_state:

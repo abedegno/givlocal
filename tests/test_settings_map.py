@@ -23,6 +23,7 @@ def settings_map():
 
 # --- Test 1: load_settings_map ---
 
+
 def test_load_settings_map(settings_map):
     assert "2001" in settings_map
     setting_17 = settings_map["2001"][17]
@@ -32,6 +33,7 @@ def test_load_settings_map(settings_map):
 
 
 # --- Test 2: get_setting_by_id ---
+
 
 def test_get_setting_by_id(settings_map):
     setting = get_setting(settings_map, "2001", 64)
@@ -43,12 +45,14 @@ def test_get_setting_by_id(settings_map):
 
 # --- Test 3: get_setting_unknown_id ---
 
+
 def test_get_setting_unknown_id(settings_map):
     result = get_setting(settings_map, "2001", 99999)
     assert result is None
 
 
 # --- Test 4: list_settings_for_model ---
+
 
 def test_list_settings_for_model(settings_map):
     settings = list_settings(settings_map, "2001")
@@ -61,6 +65,7 @@ def test_list_settings_for_model(settings_map):
 
 # --- Test 5: validate_bool_setting ---
 
+
 def test_validate_bool_setting(settings_map):
     setting = get_setting(settings_map, "2001", 17)  # bool type
     assert validate_setting_value(setting, True) is True
@@ -70,6 +75,7 @@ def test_validate_bool_setting(settings_map):
 
 
 # --- Test 6: validate_int_setting ---
+
 
 def test_validate_int_setting(settings_map):
     setting = get_setting(settings_map, "2001", 71)  # int range:4,100
@@ -82,6 +88,7 @@ def test_validate_int_setting(settings_map):
 
 # --- Test 7: validate_time_setting ---
 
+
 def test_validate_time_setting(settings_map):
     setting = get_setting(settings_map, "2001", 64)  # time type
     assert validate_setting_value(setting, "23:30") is True
@@ -93,6 +100,7 @@ def test_validate_time_setting(settings_map):
 
 # --- Test 8: convert_time_to_register_value ---
 
+
 def test_convert_time_to_register_value(settings_map):
     time_setting = get_setting(settings_map, "2001", 64)
     assert convert_to_register_value(time_setting, "23:30") == 2330
@@ -102,6 +110,7 @@ def test_convert_time_to_register_value(settings_map):
 
 # --- Test 9: convert_bool_to_register_value ---
 
+
 def test_convert_bool_to_register_value(settings_map):
     bool_setting = get_setting(settings_map, "2001", 17)
     assert convert_to_register_value(bool_setting, True) == 1
@@ -109,6 +118,7 @@ def test_convert_bool_to_register_value(settings_map):
 
 
 # --- Test 10: convert_register_to_display_value ---
+
 
 def test_convert_register_to_display_value(settings_map):
     time_setting = get_setting(settings_map, "2001", 64)
@@ -123,6 +133,7 @@ def test_convert_register_to_display_value(settings_map):
 
 
 # --- Test 11: hr_override present in list_settings ---
+
 
 def test_hr_override_in_list_settings(settings_map):
     settings = list_settings(settings_map, "2001")

@@ -36,11 +36,13 @@ class CloudDumper:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.session = requests.Session()
-        self.session.headers.update({
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        })
+        self.session.headers.update(
+            {
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            }
+        )
         self.request_count = 0
         self.inverter_serials: list[str] = []
 
@@ -50,7 +52,7 @@ class CloudDumper:
         try:
             resp = self.session.get(url, params=params, timeout=30)
             if resp.status_code == 429:
-                print(f"  Rate limited. Waiting 60s...")
+                print("  Rate limited. Waiting 60s...")
                 time.sleep(60)
                 resp = self.session.get(url, params=params, timeout=30)
             if resp.status_code == 200:
@@ -232,9 +234,9 @@ class CloudDumper:
         # 3-5. Per-inverter data
         print(f"\n[3/7] Inverter data ({len(self.inverter_serials)} inverters)...")
         for serial in self.inverter_serials:
-            print(f"\n{'='*40}")
+            print(f"\n{'=' * 40}")
             print(f"Inverter: {serial}")
-            print(f"{'='*40}")
+            print(f"{'=' * 40}")
             self.dump_settings(serial)
             self.dump_system_data(serial)
             self.dump_meter_data(serial)
@@ -243,11 +245,11 @@ class CloudDumper:
             self.dump_health(serial)
 
         # Historical data (slowest part)
-        print(f"\n[4/7] Historical data points...")
+        print("\n[4/7] Historical data points...")
         for serial in self.inverter_serials:
             self.dump_data_points(serial, days=days)
 
-        print(f"\n[5/7] Historical meter data...")
+        print("\n[5/7] Historical meter data...")
         for serial in self.inverter_serials:
             print(f"\n  [{serial}] Meter data history...")
             data = self._get(f"/inverter/{serial}/meter-data")
@@ -259,19 +261,22 @@ class CloudDumper:
 
         # 7. Summary
         elapsed = time.time() - start
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"DONE! {self.request_count} API requests in {elapsed:.0f}s")
         print(f"Data saved to: {self.output_dir}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # Save metadata
-        self._save("_dump_metadata.json", {
-            "timestamp": datetime.now().isoformat(),
-            "api_requests": self.request_count,
-            "elapsed_seconds": round(elapsed),
-            "inverter_serials": self.inverter_serials,
-            "historical_days": days,
-        })
+        self._save(
+            "_dump_metadata.json",
+            {
+                "timestamp": datetime.now().isoformat(),
+                "api_requests": self.request_count,
+                "elapsed_seconds": round(elapsed),
+                "inverter_serials": self.inverter_serials,
+                "historical_days": days,
+            },
+        )
 
 
 def main():
@@ -281,7 +286,7 @@ def main():
     )
     parser.add_argument("--token", required=True, help="GivEnergy Cloud API token (Bearer token)")
     parser.add_argument("--output", default="./cloud-dump", help="Output directory (default: ./cloud-dump)")
-    parser.add_argument("--days", type=int, default=365, help="Number of days of historical data to pull (default: 365)")
+    parser.add_argument("--days", type=int, default=365, help="Days of historical data to pull (default: 365)")
     parser.add_argument(
         "--settings-only",
         action="store_true",
