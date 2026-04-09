@@ -4,10 +4,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /
 
 WORKDIR /app
 COPY pyproject.toml .
-RUN pip install --no-cache-dir .
 COPY src/ src/
 COPY settings/ settings/
 COPY config.example.yaml config.example.yaml
+RUN pip install --no-cache-dir .
 
 EXPOSE 8099
 CMD ["uvicorn", "givenergy_local.main:app", "--host", "0.0.0.0", "--port", "8099"]
