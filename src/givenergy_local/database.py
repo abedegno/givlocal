@@ -54,11 +54,11 @@ CREATE TABLE IF NOT EXISTS preset_profiles (
 """
 
 
-def init_app_db(db_path: str) -> sqlite3.Connection:
+def init_app_db(db_path: str, check_same_thread: bool = False) -> sqlite3.Connection:
     """Create (or open) the app database, apply schema, and return the connection."""
     path = Path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, check_same_thread=check_same_thread)
     conn.executescript(APP_SCHEMA)
     conn.commit()
     return conn

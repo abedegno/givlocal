@@ -1,0 +1,10 @@
+services:
+  givenergy-local:
+    build: .
+    ports:
+      - "8099:8099"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./data:/app/data
+    restart: unless-stopped
+    network_mode: host

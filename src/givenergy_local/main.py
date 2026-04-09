@@ -80,19 +80,36 @@ async def lifespan(app: FastAPI):
             plaintext,
         )
 
-    # 4. TODO (Task 9): Initialise inverter managers
-    # For each inverter in config, create InverterState and connect modbus client.
+    # 4. Connect to inverters
+    from .inverter_manager import InverterManager
+    manager = InverterManager()
+    if config and config.inverters:
+        await manager.connect_all(config.inverters)
+    app_state.inverters = manager.inverters
 
-    # 5. TODO (Task 10): Start background poller
-    # Launch asyncio task that polls inverters at config.poll_interval.
+    if not app_state.inverters:
+        logger.warning("No inverters connected. API will return empty data.")
+
+    # 5. Start background poller
+    from .poller import poll_loop
+    import asyncio
+    poller_task = asyncio.create_task(
+        poll_loop(app_state.inverters, app_state.metrics_store,
+                  interval=config.poll_interval if config else 30,
+                  full_refresh_interval=config.full_refresh_interval if config else 300)
+    )
 
     yield
 
     # Shutdown: clean up resources
-    if app_state.metrics_store:
-        app_state.metrics_store.close()
-    if app_state.token_store:
-        app_state.token_store._conn.close()
+    poller_task.cancel()
+    try:
+        await poller_task
+    except asyncio.CancelledError:
+        pass
+    await manager.close_all()
+    app_state.metrics_store.close()
+    app_db_conn.close()
 
     logger.info("GivEnergy Local API shut down")
 
