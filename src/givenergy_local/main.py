@@ -37,6 +37,7 @@ class AppState:
     token_store: Optional[TokenStore] = None
     metrics_store: Optional[MetricsStore] = None
     inverters: dict[str, InverterState] = field(default_factory=dict)
+    settings_map: dict = field(default_factory=dict)
     auth_required: bool = True
 
 
@@ -78,6 +79,11 @@ async def lifespan(app: FastAPI):
             "No API tokens found — generated admin token: %s  (store this securely, it will not be shown again)",
             plaintext,
         )
+
+    # 3b. Load settings map
+    from .settings_map import load_settings_map
+
+    app_state.settings_map = load_settings_map("settings")
 
     # 4. Connect to inverters
     from .inverter_manager import InverterManager
@@ -126,11 +132,13 @@ app = FastAPI(
 )
 
 from .api.devices import router as devices_router  # noqa: E402
+from .api.inverter_control import router as inverter_control_router  # noqa: E402
 from .api.inverter_data import router as inverter_data_router  # noqa: E402
 from .api.prometheus import router as prometheus_router  # noqa: E402
 
 app.include_router(devices_router, prefix="/v1")
 app.include_router(inverter_data_router, prefix="/v1")
+app.include_router(inverter_control_router, prefix="/v1")
 app.include_router(prometheus_router)
 
 
