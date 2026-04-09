@@ -1,0 +1,462 @@
+model: "2001"
+settings:
+  17:
+    name: "Enable AC Charge Upper % Limit"
+    register: enable_charge_target
+    type: bool
+    validation: "in:true,false"
+
+  24:
+    name: "Enable Eco Mode"
+    register: eco_mode
+    type: bool
+    validation: "in:true,false"
+
+  41:
+    name: "DC Discharge 2 Start Time"
+    register: discharge_slot_2_start
+    type: time
+    validation: "time"
+
+  42:
+    name: "DC Discharge 2 End Time"
+    register: discharge_slot_2_end
+    type: time
+    validation: "time"
+
+  47:
+    name: "Inverter Max Output Active Power Percent"
+    register: active_power_rate
+    type: int
+    validation: "range:0,100"
+    hr_override: 50
+
+  53:
+    name: "DC Discharge 1 Start Time"
+    register: discharge_slot_1_start
+    type: time
+    validation: "time"
+
+  54:
+    name: "DC Discharge 1 End Time"
+    register: discharge_slot_1_end
+    type: time
+    validation: "time"
+
+  56:
+    name: "Enable DC Discharge"
+    register: enable_discharge
+    type: bool
+    validation: "in:true,false"
+    hr_override: 59
+
+  64:
+    name: "AC Charge 1 Start Time"
+    register: charge_slot_1_start
+    type: time
+    validation: "time"
+
+  65:
+    name: "AC Charge 1 End Time"
+    register: charge_slot_1_end
+    type: time
+    validation: "time"
+
+  66:
+    name: "AC Charge Enable"
+    register: enable_charge
+    type: bool
+    validation: "in:true,false"
+    hr_override: 96
+
+  71:
+    name: "Battery Reserve % Limit"
+    register: battery_soc_reserve
+    type: int
+    validation: "range:4,100"
+    hr_override: 110
+
+  72:
+    name: "Battery Charge Power"
+    register: battery_charge_limit
+    type: int
+    validation: "range:0,3600"
+
+  73:
+    name: "Battery Discharge Power"
+    register: battery_discharge_limit
+    type: int
+    validation: "range:0,3600"
+
+  75:
+    name: "Battery Cutoff % Limit"
+    register: battery_discharge_min_power_reserve
+    type: int
+    validation: "range:4,100"
+
+  77:
+    name: "AC Charge Upper % Limit"
+    register: charge_target_soc
+    type: int
+    validation: "range:0,100"
+
+  83:
+    name: "Restart Inverter"
+    register: inverter_reboot
+    type: int
+    validation: "in:100"
+    hr_override: 163
+
+  96:
+    name: "Pause Battery"
+    register: battery_pause_mode
+    type: int
+    validation: "in:0,1,2,3"
+
+  101:
+    name: "AC Charge 1 Upper SOC % Limit"
+    register: charge_target_soc_1
+    type: int
+    validation: "range:0,100"
+
+  102:
+    name: "AC Charge 2 Start Time"
+    register: charge_slot_2_start
+    type: time
+    validation: "time"
+
+  103:
+    name: "AC Charge 2 End Time"
+    register: charge_slot_2_end
+    type: time
+    validation: "time"
+
+  104:
+    name: "AC Charge 2 Upper SOC % Limit"
+    register: charge_target_soc_2
+    type: int
+    validation: "range:0,100"
+
+  105:
+    name: "AC Charge 3 Start Time"
+    register: charge_slot_3_start
+    type: time
+    validation: "time"
+
+  106:
+    name: "AC Charge 3 End Time"
+    register: charge_slot_3_end
+    type: time
+    validation: "time"
+
+  107:
+    name: "AC Charge 3 Upper SOC % Limit"
+    register: charge_target_soc_3
+    type: int
+    validation: "range:0,100"
+
+  108:
+    name: "AC Charge 4 Start Time"
+    register: charge_slot_4_start
+    type: time
+    validation: "time"
+
+  109:
+    name: "AC Charge 4 End Time"
+    register: charge_slot_4_end
+    type: time
+    validation: "time"
+
+  110:
+    name: "AC Charge 4 Upper SOC % Limit"
+    register: charge_target_soc_4
+    type: int
+    validation: "range:0,100"
+
+  111:
+    name: "AC Charge 5 Start Time"
+    register: charge_slot_5_start
+    type: time
+    validation: "time"
+
+  112:
+    name: "AC Charge 5 End Time"
+    register: charge_slot_5_end
+    type: time
+    validation: "time"
+
+  113:
+    name: "AC Charge 5 Upper SOC % Limit"
+    register: charge_target_soc_5
+    type: int
+    validation: "range:0,100"
+
+  114:
+    name: "AC Charge 6 Start Time"
+    register: charge_slot_6_start
+    type: time
+    validation: "time"
+
+  115:
+    name: "AC Charge 6 End Time"
+    register: charge_slot_6_end
+    type: time
+    validation: "time"
+
+  116:
+    name: "AC Charge 6 Upper SOC % Limit"
+    register: charge_target_soc_6
+    type: int
+    validation: "range:0,100"
+
+  117:
+    name: "AC Charge 7 Start Time"
+    register: charge_slot_7_start
+    type: time
+    validation: "time"
+
+  118:
+    name: "AC Charge 7 End Time"
+    register: charge_slot_7_end
+    type: time
+    validation: "time"
+
+  119:
+    name: "AC Charge 7 Upper SOC % Limit"
+    register: charge_target_soc_7
+    type: int
+    validation: "range:0,100"
+
+  120:
+    name: "AC Charge 8 Start Time"
+    register: charge_slot_8_start
+    type: time
+    validation: "time"
+
+  121:
+    name: "AC Charge 8 End Time"
+    register: charge_slot_8_end
+    type: time
+    validation: "time"
+
+  122:
+    name: "AC Charge 8 Upper SOC % Limit"
+    register: charge_target_soc_8
+    type: int
+    validation: "range:0,100"
+
+  123:
+    name: "AC Charge 9 Start Time"
+    register: charge_slot_9_start
+    type: time
+    validation: "time"
+
+  124:
+    name: "AC Charge 9 End Time"
+    register: charge_slot_9_end
+    type: time
+    validation: "time"
+
+  125:
+    name: "AC Charge 9 Upper SOC % Limit"
+    register: charge_target_soc_9
+    type: int
+    validation: "range:0,100"
+
+  126:
+    name: "AC Charge 10 Start Time"
+    register: charge_slot_10_start
+    type: time
+    validation: "time"
+
+  127:
+    name: "AC Charge 10 End Time"
+    register: charge_slot_10_end
+    type: time
+    validation: "time"
+
+  128:
+    name: "AC Charge 10 Upper SOC % Limit"
+    register: charge_target_soc_10
+    type: int
+    validation: "range:0,100"
+
+  129:
+    name: "DC Discharge 1 Lower SOC"
+    register: discharge_target_soc_1
+    type: int
+    validation: "range:4,100"
+
+  130:
+    name: "DC Discharge 2 Lower SOC"
+    register: discharge_target_soc_2
+    type: int
+    validation: "range:4,100"
+
+  131:
+    name: "DC Discharge 3 Start Time"
+    register: discharge_slot_3_start
+    type: time
+    validation: "time"
+
+  132:
+    name: "DC Discharge 3 End Time"
+    register: discharge_slot_3_end
+    type: time
+    validation: "time"
+
+  133:
+    name: "DC Discharge 3 Lower SOC"
+    register: discharge_target_soc_3
+    type: int
+    validation: "range:4,100"
+
+  134:
+    name: "DC Discharge 4 Start Time"
+    register: discharge_slot_4_start
+    type: time
+    validation: "time"
+
+  135:
+    name: "DC Discharge 4 End Time"
+    register: discharge_slot_4_end
+    type: time
+    validation: "time"
+
+  136:
+    name: "DC Discharge 4 Lower SOC"
+    register: discharge_target_soc_4
+    type: int
+    validation: "range:4,100"
+
+  137:
+    name: "DC Discharge 5 Start Time"
+    register: discharge_slot_5_start
+    type: time
+    validation: "time"
+
+  138:
+    name: "DC Discharge 5 End Time"
+    register: discharge_slot_5_end
+    type: time
+    validation: "time"
+
+  139:
+    name: "DC Discharge 5 Lower SOC"
+    register: discharge_target_soc_5
+    type: int
+    validation: "range:4,100"
+
+  140:
+    name: "DC Discharge 6 Start Time"
+    register: discharge_slot_6_start
+    type: time
+    validation: "time"
+
+  141:
+    name: "DC Discharge 6 End Time"
+    register: discharge_slot_6_end
+    type: time
+    validation: "time"
+
+  142:
+    name: "DC Discharge 6 Lower SOC"
+    register: discharge_target_soc_6
+    type: int
+    validation: "range:4,100"
+
+  143:
+    name: "DC Discharge 7 Start Time"
+    register: discharge_slot_7_start
+    type: time
+    validation: "time"
+
+  144:
+    name: "DC Discharge 7 End Time"
+    register: discharge_slot_7_end
+    type: time
+    validation: "time"
+
+  145:
+    name: "DC Discharge 7 Lower SOC"
+    register: discharge_target_soc_7
+    type: int
+    validation: "range:4,100"
+
+  146:
+    name: "DC Discharge 8 Start Time"
+    register: discharge_slot_8_start
+    type: time
+    validation: "time"
+
+  147:
+    name: "DC Discharge 8 End Time"
+    register: discharge_slot_8_end
+    type: time
+    validation: "time"
+
+  148:
+    name: "DC Discharge 8 Lower SOC"
+    register: discharge_target_soc_8
+    type: int
+    validation: "range:4,100"
+
+  149:
+    name: "DC Discharge 9 Start Time"
+    register: discharge_slot_9_start
+    type: time
+    validation: "time"
+
+  150:
+    name: "DC Discharge 9 End Time"
+    register: discharge_slot_9_end
+    type: time
+    validation: "time"
+
+  151:
+    name: "DC Discharge 9 Lower SOC"
+    register: discharge_target_soc_9
+    type: int
+    validation: "range:4,100"
+
+  152:
+    name: "DC Discharge 10 Start Time"
+    register: discharge_slot_10_start
+    type: time
+    validation: "time"
+
+  153:
+    name: "DC Discharge 10 End Time"
+    register: discharge_slot_10_end
+    type: time
+    validation: "time"
+
+  154:
+    name: "DC Discharge 10 Lower SOC"
+    register: discharge_target_soc_10
+    type: int
+    validation: "range:4,100"
+
+  155:
+    name: "Pause Battery Start Time"
+    register: battery_pause_slot_1_start
+    type: time
+    validation: "time"
+
+  156:
+    name: "Pause Battery End Time"
+    register: battery_pause_slot_1_end
+    type: time
+    validation: "time"
+
+  267:
+    name: "Inverter Charge Power %"
+    register: battery_charge_limit_ac
+    type: int
+    validation: "range:1,100"
+
+  268:
+    name: "Inverter Discharge Power %"
+    register: battery_discharge_limit_ac
+    type: int
+    validation: "range:1,100"
