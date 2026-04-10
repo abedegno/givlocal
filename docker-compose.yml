@@ -1,10 +1,17 @@
 services:
-  givlocal:
-    build: .
+  api:
+    build: api/
     ports:
       - "8099:8099"
     volumes:
-      - ./config.yaml:/app/config.yaml
-      - ./data:/app/data
+      - ./api/config.yaml:/app/config.yaml
+      - ./api/data:/app/data
+      - ./api/cloud-data:/app/cloud-data
     restart: unless-stopped
     network_mode: host
+
+  # app:
+  #   build: app/
+  #   ports:
+  #     - "3000:80"
+  #   restart: unless-stopped
