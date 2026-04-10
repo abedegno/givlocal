@@ -1,107 +1,176 @@
-"""Settings map: Cloud API setting ID -> Modbus register mapping."""
+"""Settings map: Auto-resolution from cloud API dump JSON."""
 
 from __future__ import annotations
 
-import os
+import json
 import re
 from typing import Any
 
-import yaml
-
-# SettingsMap: model_code -> {setting_id -> setting_dict}
-SettingsMap = dict[str, dict[int, dict]]
+# SettingsById: setting_id -> setting_dict
+SettingsById = dict[int, dict]
 
 
-def load_settings_map(settings_dir: str) -> SettingsMap:
-    """Load all YAML files from settings_dir/models/, return dict keyed by model code."""
-    models_dir = os.path.join(settings_dir, "models")
-    result: SettingsMap = {}
+def resolve_register_name(cloud_name: str) -> str | None:
+    """Pattern match a cloud setting name to a Modbus register name."""
+    # Numbered slot patterns (N is one or more digits)
+    m = re.fullmatch(r"AC Charge (\d+) Start Time", cloud_name)
+    if m:
+        return f"charge_slot_{m.group(1)}_start"
 
-    if not os.path.isdir(models_dir):
-        return result
+    m = re.fullmatch(r"AC Charge (\d+) End Time", cloud_name)
+    if m:
+        return f"charge_slot_{m.group(1)}_end"
 
-    for filename in os.listdir(models_dir):
-        if not filename.endswith(".yaml") and not filename.endswith(".yml"):
-            continue
-        filepath = os.path.join(models_dir, filename)
-        with open(filepath) as f:
-            data = yaml.safe_load(f)
+    m = re.fullmatch(r"AC Charge (\d+) Upper SOC.*", cloud_name)
+    if m:
+        return f"charge_target_soc_{m.group(1)}"
 
-        model_code = str(data["model"])
-        settings_raw = data.get("settings", {})
+    m = re.fullmatch(r"DC Discharge (\d+) Start Time", cloud_name)
+    if m:
+        return f"discharge_slot_{m.group(1)}_start"
 
-        # Ensure keys are ints
-        settings: dict[int, dict] = {}
-        for k, v in settings_raw.items():
-            settings[int(k)] = v
+    m = re.fullmatch(r"DC Discharge (\d+) End Time", cloud_name)
+    if m:
+        return f"discharge_slot_{m.group(1)}_end"
 
-        result[model_code] = settings
+    m = re.fullmatch(r"DC Discharge (\d+) Lower SOC.*", cloud_name)
+    if m:
+        return f"discharge_target_soc_{m.group(1)}"
+
+    # Exact/prefix matches
+    if cloud_name == "Enable Eco Mode":
+        return "eco_mode"
+    if cloud_name == "Enable AC Charge Upper":
+        return "enable_charge_target"
+    if cloud_name == "AC Charge Enable":
+        return "enable_charge"
+    if cloud_name == "Enable DC Discharge":
+        return "enable_discharge"
+    if cloud_name == "Battery Reserve % Limit":
+        return "battery_soc_reserve"
+    if cloud_name == "Battery Cutoff % Limit":
+        return "battery_discharge_min_power_reserve"
+    if cloud_name.endswith("Battery Charge Power"):
+        return "battery_charge_limit"
+    if cloud_name.endswith("Battery Discharge Power"):
+        return "battery_discharge_limit"
+    if cloud_name.endswith("AC Charge Upper % Limit"):
+        return "charge_target_soc"
+    if cloud_name == "Inverter Max Output Active Power":
+        return "active_power_rate"
+    if cloud_name == "Restart Inverter":
+        return "inverter_reboot"
+    if cloud_name == "Pause Battery Start" or cloud_name == "Pause Battery Start Time":
+        return "battery_pause_slot_1_start"
+    if cloud_name == "Pause Battery End" or cloud_name == "Pause Battery End Time":
+        return "battery_pause_slot_1_end"
+    if cloud_name == "Pause Battery":
+        return "battery_pause_mode"
+    if cloud_name == "Inverter Charge Power Percentage":
+        return "battery_charge_limit_ac"
+    if cloud_name == "Inverter Discharge Power Percentage":
+        return "battery_discharge_limit_ac"
+    if cloud_name == "Enable EPS":
+        return "enable_ups_mode"
+
+    return None
+
+
+def resolve_setting_type(validation: str, validation_rules: list[str]) -> str:
+    """Infer setting type from cloud validation rules."""
+    for rule in validation_rules:
+        if rule == "boolean":
+            return "bool"
+        if rule.startswith("date_format"):
+            return "time"
+    if "true or false" in validation.lower():
+        return "bool"
+    if "HH:mm" in validation:
+        return "time"
+    return "int"
+
+
+def load_settings_from_cloud_dump(json_path: str) -> SettingsById:
+    """Load settings from a cloud API dump JSON file.
+
+    Handles both ``{"data": [...]}`` and bare ``[...]`` formats.
+    Returns a dict keyed by setting ID with resolved register name and type.
+    """
+    with open(json_path) as f:
+        raw = json.load(f)
+
+    if isinstance(raw, dict):
+        items = raw.get("data", [])
+    else:
+        items = raw
+
+    result: SettingsById = {}
+    for item in items:
+        setting_id = int(item["id"])
+        name = item.get("name", "")
+        validation = item.get("validation", "")
+        validation_rules = item.get("validation_rules", [])
+
+        register = resolve_register_name(name)
+        setting_type = resolve_setting_type(validation, validation_rules)
+
+        result[setting_id] = {
+            "id": setting_id,
+            "name": name,
+            "register": register,
+            "type": setting_type,
+            "validation": validation,
+            "validation_rules": validation_rules,
+        }
 
     return result
 
 
-def get_setting(settings_map: SettingsMap, model: str, setting_id: int) -> dict | None:
-    """Lookup a single setting by model code and cloud API setting ID."""
-    model_settings = settings_map.get(str(model))
-    if model_settings is None:
-        return None
-    return model_settings.get(int(setting_id))
+def get_setting(settings: SettingsById, setting_id: int) -> dict | None:
+    """Look up a single setting by ID."""
+    return settings.get(int(setting_id))
 
 
-def list_settings(settings_map: SettingsMap, model: str) -> list[dict]:
-    """Return all settings for a model in cloud API format."""
-    model_settings = settings_map.get(str(model), {})
+def list_settings(settings: SettingsById) -> list[dict]:
+    """Return all settings in cloud API format (id, name, validation, validation_rules)."""
     result = []
-    for setting_id, setting in sorted(model_settings.items()):
-        validation_rules = _parse_validation_rules(setting.get("validation", ""))
+    for setting_id in sorted(settings.keys()):
+        s = settings[setting_id]
         result.append(
             {
-                "id": setting_id,
-                "name": setting.get("name", ""),
-                "validation": setting.get("validation", ""),
-                "validation_rules": validation_rules,
-                "register": setting.get("register", ""),
-                "type": setting.get("type", ""),
-                **({"hr_override": setting["hr_override"]} if "hr_override" in setting else {}),
+                "id": s["id"],
+                "name": s["name"],
+                "validation": s.get("validation", ""),
+                "validation_rules": s.get("validation_rules", []),
             }
         )
     return result
 
 
-def _parse_validation_rules(validation: str) -> dict:
-    """Parse validation string into structured rules dict."""
-    if not validation:
-        return {}
+def get_hr_index(setting: dict) -> int | None:
+    """Look up the HR index for a setting's register name from BaseInverter.REGISTER_LUT."""
+    register = setting.get("register")
+    if not register:
+        return None
+    try:
+        from givenergy_modbus_async.model.inverter import BaseInverter
 
-    if validation == "time":
-        return {"type": "time"}
-
-    if validation.startswith("range:"):
-        parts = validation[len("range:") :].split(",")
-        return {"type": "range", "min": int(parts[0]), "max": int(parts[1])}
-
-    if validation.startswith("in:"):
-        raw_values = validation[len("in:") :].split(",")
-        # Try to parse as ints; fall back to strings
-        values: list[Any] = []
-        for v in raw_values:
-            v = v.strip()
-            if v in ("true", "false"):
-                values.append(v == "true")
-            else:
-                try:
-                    values.append(int(v))
-                except ValueError:
-                    values.append(v)
-        return {"type": "in", "values": values}
-
-    return {"raw": validation}
+        lut = BaseInverter.REGISTER_LUT
+        rd = lut.get(register)
+        if rd is None:
+            return None
+        registers = rd.registers
+        if not registers:
+            return None
+        return registers[0]._idx
+    except Exception:
+        return None
 
 
 def validate_setting_value(setting: dict, value: Any) -> bool:
-    """Validate a value against a setting's type and rules."""
+    """Validate a value against a setting's type and validation_rules."""
     setting_type = setting.get("type", "")
-    validation = setting.get("validation", "")
+    validation_rules = setting.get("validation_rules", [])
 
     if setting_type == "bool":
         return isinstance(value, bool)
@@ -112,13 +181,16 @@ def validate_setting_value(setting: dict, value: Any) -> bool:
     if setting_type == "int":
         if not isinstance(value, int) or isinstance(value, bool):
             return False
-        if validation.startswith("range:"):
-            parts = validation[len("range:") :].split(",")
-            lo, hi = int(parts[0]), int(parts[1])
-            return lo <= value <= hi
-        if validation.startswith("in:"):
-            allowed = [int(v.strip()) for v in validation[len("in:") :].split(",")]
-            return value in allowed
+        for rule in validation_rules:
+            if rule.startswith("between:"):
+                parts = rule[len("between:"):].split(",")
+                lo, hi = int(parts[0]), int(parts[1])
+                if not (lo <= value <= hi):
+                    return False
+            elif rule.startswith("in:"):
+                allowed = [int(v.strip()) for v in rule[len("in:"):].split(",")]
+                if value not in allowed:
+                    return False
         return True
 
     return True
