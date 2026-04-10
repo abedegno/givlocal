@@ -170,7 +170,7 @@ class ApiService {
     if (connectionState == ConnectionState.disconnected) return [];
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '$_baseUrl/v1/inverter/$serial/data-points/$date',
+        '$_baseUrl/v1/inverter/$serial/data-points/$date?pageSize=2000',
         options: Options(headers: _headers),
       );
       final data = response.data;
