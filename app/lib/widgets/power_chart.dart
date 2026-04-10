@@ -11,7 +11,7 @@ class PowerChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (dataPoints.isEmpty) {
       return SizedBox(
-        height: 200,
+        height: 220,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -20,7 +20,8 @@ class PowerChart extends StatelessWidget {
               const SizedBox(height: 8),
               const Text('No data for this date', style: TextStyle(color: GivLocalColors.textMuted, fontSize: 14)),
               const SizedBox(height: 4),
-              const Text('Try a date when your system was online', style: TextStyle(color: GivLocalColors.textMuted, fontSize: 11)),
+              const Text('Try a date when your system was online',
+                  style: TextStyle(color: GivLocalColors.textMuted, fontSize: 11)),
             ],
           ),
         ),
@@ -31,6 +32,7 @@ class PowerChart extends StatelessWidget {
     final gridSpots = <FlSpot>[];
     final batterySpots = <FlSpot>[];
     final consumptionSpots = <FlSpot>[];
+    final timeLabels = <int, String>{};
 
     for (var i = 0; i < dataPoints.length; i++) {
       final dp = dataPoints[i];
@@ -45,9 +47,21 @@ class PowerChart extends StatelessWidget {
       gridSpots.add(FlSpot(x, grid.abs() / 1000));
       batterySpots.add(FlSpot(x, battery.abs() / 1000));
       consumptionSpots.add(FlSpot(x, consumption.abs() / 1000));
+
+      // Parse time for X axis labels
+      final timeStr = dp['time'] as String? ?? '';
+      if (timeStr.isNotEmpty) {
+        try {
+          final dt = DateTime.parse(timeStr);
+          timeLabels[i] = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        } catch (_) {}
+      }
     }
 
-    LineChartBarData _series(
+    // Calculate label interval - show ~6 labels across the chart
+    final labelInterval = dataPoints.length > 6 ? (dataPoints.length / 6).ceil() : 1;
+
+    LineChartBarData series(
       List<FlSpot> spots,
       Color color, {
       List<int>? dashArray,
@@ -61,7 +75,7 @@ class PowerChart extends StatelessWidget {
         dotData: const FlDotData(show: false),
         belowBarData: BarAreaData(
           show: true,
-          color: color.withOpacity(0.15),
+          color: color.withAlpha(38),
         ),
       );
     }
@@ -69,7 +83,7 @@ class PowerChart extends StatelessWidget {
     return Semantics(
       label: 'Power chart showing solar, battery, grid and consumption over time',
       child: SizedBox(
-        height: 200,
+        height: 220,
         child: LineChart(
           LineChartData(
             gridData: FlGridData(
@@ -80,21 +94,57 @@ class PowerChart extends StatelessWidget {
                 strokeWidth: 1,
               ),
             ),
-            titlesData: const FlTitlesData(show: false),
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 36,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      '${value.toStringAsFixed(0)}',
+                      style: const TextStyle(color: GivLocalColors.textMuted, fontSize: 10),
+                    );
+                  },
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 24,
+                  interval: labelInterval.toDouble(),
+                  getTitlesWidget: (value, meta) {
+                    final idx = value.toInt();
+                    final label = timeLabels[idx];
+                    if (label == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        label,
+                        style: const TextStyle(color: GivLocalColors.textMuted, fontSize: 10),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
             borderData: FlBorderData(show: false),
             lineBarsData: [
-              _series(solarSpots, GivLocalColors.solar),
-              _series(batterySpots, GivLocalColors.battery, dashArray: [8, 4]),
-              _series(gridSpots, GivLocalColors.grid, dashArray: [4, 4]),
-              _series(consumptionSpots, GivLocalColors.home, dashArray: [2, 2]),
+              series(solarSpots, GivLocalColors.solar),
+              series(batterySpots, GivLocalColors.battery, dashArray: [8, 4]),
+              series(gridSpots, GivLocalColors.grid, dashArray: [4, 4]),
+              series(consumptionSpots, GivLocalColors.home, dashArray: [2, 2]),
             ],
             lineTouchData: LineTouchData(
               touchTooltipData: LineTouchTooltipData(
                 getTooltipColor: (_) => GivLocalColors.background,
                 getTooltipItems: (touchedSpots) {
                   return touchedSpots.map((spot) {
+                    final idx = spot.spotIndex;
+                    final time = timeLabels[idx] ?? '';
                     return LineTooltipItem(
-                      '${spot.y.toStringAsFixed(2)} kW',
+                      '$time  ${spot.y.toStringAsFixed(2)} kW',
                       TextStyle(color: spot.bar.color, fontSize: 11),
                     );
                   }).toList();
