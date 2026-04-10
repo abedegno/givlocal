@@ -9,6 +9,19 @@ String _formatKwh(double kwh) {
   return '${kwh.toStringAsFixed(1)} kWh';
 }
 
+String _timeAgo(String isoTime) {
+  try {
+    final dt = DateTime.parse(isoTime);
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 10) return 'just now';
+    if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    return '${diff.inHours}h ago';
+  } catch (_) {
+    return isoTime;
+  }
+}
+
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -28,11 +41,21 @@ class DashboardScreen extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Dashboard',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Dashboard',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    if (system != null)
+                      Text(
+                        'Updated ${_timeAgo(system.time)}',
+                        style: const TextStyle(fontSize: 11, color: GivLocalColors.textMuted),
                       ),
+                  ],
                 ),
                 const ConnectionIndicator(),
               ],
