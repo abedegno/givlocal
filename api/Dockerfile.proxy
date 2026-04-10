@@ -1,0 +1,14 @@
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY pyproject.toml .
+COPY src/ src/
+RUN pip install --no-cache-dir .
+
+COPY proxy-config.example.yaml proxy-config.yaml
+
+EXPOSE 7654
+
+CMD ["python", "-m", "givlocal.cli.proxy", "--config", "proxy-config.yaml"]
