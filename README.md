@@ -6,16 +6,19 @@ Self-hosted replacement for the GivEnergy Cloud API. Communicates with your GivE
 
 GivEnergy has filed notice to appoint administrators. Archive your data from `api.givenergy.cloud` **now** before it goes offline.
 
-### Quick Start (no install needed)
+### Quick Start
 
 ```bash
 # Clone the repo
 git clone https://github.com/abedegno/givlocal.git
-cd givlocal
+cd givlocal/api
 
-# Run the cloud dump tool (requires Python 3.11+ and requests)
-pip install requests pyyaml
-python -m givlocal.cli.cloud_dump \
+# Set up a virtual environment (required on Raspberry Pi / Debian)
+python3 -m venv .venv
+.venv/bin/pip install requests pyyaml
+
+# Run the cloud dump tool
+PYTHONPATH=src .venv/bin/python -m givlocal.cli.cloud_dump \
   --token YOUR_API_TOKEN \
   --output ./my-cloud-dump \
   --days 1460
@@ -44,13 +47,14 @@ python -m givlocal.cli.cloud_dump \
 
 ```bash
 # Full dump (all history, takes ~20 minutes for 4 years)
-python -m givlocal.cli.cloud_dump --token TOKEN --output ./dump --days 1460
+# Full dump (all history, takes ~20 minutes for 4 years)
+PYTHONPATH=src .venv/bin/python -m givlocal.cli.cloud_dump --token TOKEN --output ./dump --days 1460
 
 # Settings only (fastest -- critical for GivLocal to work)
-python -m givlocal.cli.cloud_dump --token TOKEN --output ./dump --settings-only
+PYTHONPATH=src .venv/bin/python -m givlocal.cli.cloud_dump --token TOKEN --output ./dump --settings-only
 
 # Last 30 days only
-python -m givlocal.cli.cloud_dump --token TOKEN --output ./dump --days 30
+PYTHONPATH=src .venv/bin/python -m givlocal.cli.cloud_dump --token TOKEN --output ./dump --days 30
 ```
 
 **Important:** The `settings.json` file is needed by GivLocal to control your inverter. Copy it to `cloud-data/settings.json` in your GivLocal installation after dumping.
