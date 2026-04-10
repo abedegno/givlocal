@@ -26,26 +26,29 @@ class ConnectionIndicator extends ConsumerWidget {
         label = 'Disconnected';
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: dotColor,
-            shape: BoxShape.circle,
+    return Semantics(
+      label: 'Connection status: $label',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
           ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            color: GivLocalColors.textSecondary,
-            fontSize: 12,
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: GivLocalColors.textSecondary,
+              fontSize: 12,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/system_data.dart';
 import '../theme.dart';
 
+// TODO: When adding flow animations, check MediaQuery.disableAnimations
+// to respect prefers-reduced-motion. Keep durations 150-300ms.
 class FlowPainter extends CustomPainter {
   final SystemData data;
   final Offset solarCenter;

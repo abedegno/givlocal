@@ -200,7 +200,16 @@ class _SchedulesScreenState extends ConsumerState<SchedulesScreen> {
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 12),
+                  Text('Loading settings...', style: TextStyle(color: GivLocalColors.textMuted)),
+                ],
+              ),
+            )
           : _serial == null || _serial!.isEmpty
               ? _buildNotConnected()
               : _buildContent(),

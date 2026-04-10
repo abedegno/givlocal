@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' show FontFeature;
 import '../models/system_data.dart';
 import '../theme.dart';
 import 'flow_painter.dart';
@@ -27,49 +28,52 @@ class EnergyFlowDiagram extends StatelessWidget {
       final batteryCenter = Offset(w * 0.15, h / 2);
       final gridCenter = Offset(w * 0.85, h / 2);
 
-      return Stack(
-        children: [
-          // Flow lines layer
-          CustomPaint(
-            size: Size(w, h),
-            painter: FlowPainter(
-              data: data,
-              solarCenter: solarCenter,
-              homeCenter: homeCenter,
-              batteryCenter: batteryCenter,
-              gridCenter: gridCenter,
+      return Semantics(
+        label: 'Energy flow: Solar ${_formatPower(data.solar.power)}, Home ${_formatPower(data.consumption)}, Battery ${data.battery.percent}%, Grid ${_formatPower(data.grid.power)}',
+        child: Stack(
+          children: [
+            // Flow lines layer
+            CustomPaint(
+              size: Size(w, h),
+              painter: FlowPainter(
+                data: data,
+                solarCenter: solarCenter,
+                homeCenter: homeCenter,
+                batteryCenter: batteryCenter,
+                gridCenter: gridCenter,
+              ),
             ),
-          ),
-          // Nodes
-          _NodeWidget(
-            center: solarCenter,
-            icon: Icons.wb_sunny,
-            color: GivLocalColors.solar,
-            label: 'Solar',
-            value: _formatPower(data.solar.power),
-          ),
-          _NodeWidget(
-            center: homeCenter,
-            icon: Icons.home,
-            color: GivLocalColors.home,
-            label: 'Home',
-            value: _formatPower(data.consumption),
-          ),
-          _NodeWidget(
-            center: batteryCenter,
-            icon: Icons.battery_charging_full,
-            color: GivLocalColors.battery,
-            label: 'Battery',
-            value: '${data.battery.percent}%',
-          ),
-          _NodeWidget(
-            center: gridCenter,
-            icon: Icons.electric_bolt,
-            color: GivLocalColors.grid,
-            label: 'Grid',
-            value: _formatPower(data.grid.power.abs()),
-          ),
-        ],
+            // Nodes
+            _NodeWidget(
+              center: solarCenter,
+              icon: Icons.wb_sunny,
+              color: GivLocalColors.solar,
+              label: 'Solar',
+              value: _formatPower(data.solar.power),
+            ),
+            _NodeWidget(
+              center: homeCenter,
+              icon: Icons.home,
+              color: GivLocalColors.home,
+              label: 'Home',
+              value: _formatPower(data.consumption),
+            ),
+            _NodeWidget(
+              center: batteryCenter,
+              icon: Icons.battery_charging_full,
+              color: GivLocalColors.battery,
+              label: 'Battery',
+              value: '${data.battery.percent}%',
+            ),
+            _NodeWidget(
+              center: gridCenter,
+              icon: Icons.electric_bolt,
+              color: GivLocalColors.grid,
+              label: 'Grid',
+              value: _formatPower(data.grid.power.abs()),
+            ),
+          ],
+        ),
       );
     });
   }
@@ -101,36 +105,40 @@ class _NodeWidget extends StatelessWidget {
       top: center.dy - nodeRadius,
       width: totalWidth,
       height: totalHeight,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: nodeRadius * 2,
-            height: nodeRadius * 2,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withValues(alpha: 0.15),
-              border: Border.all(color: color, width: 2),
+      child: Semantics(
+        label: '$label: $value',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: nodeRadius * 2,
+              height: nodeRadius * 2,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withValues(alpha: 0.15),
+                border: Border.all(color: color, width: 2),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: GivLocalColors.textSecondary,
-              fontSize: 11,
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: GivLocalColors.textSecondary,
+                fontSize: 12,
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: GivLocalColors.textPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+            Text(
+              value,
+              style: const TextStyle(
+                color: GivLocalColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

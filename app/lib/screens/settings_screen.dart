@@ -378,7 +378,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const BorderSide(color: GivLocalColors.accent, width: 1.5),
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       ),
     );
   }
@@ -445,7 +445,7 @@ class _FieldLabel extends StatelessWidget {
       label,
       style: const TextStyle(
         color: GivLocalColors.textSecondary,
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: FontWeight.w500,
       ),
     );

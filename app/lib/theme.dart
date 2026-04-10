@@ -11,7 +11,16 @@ class GivLocalColors {
   static const Color cardBorder = Color(0x14FFFFFF); // rgba(255,255,255,0.08)
   static const Color textPrimary = Color(0xFFE2E8F0);
   static const Color textSecondary = Color(0xFF94A3B8);
-  static const Color textMuted = Color(0xFF64748B);
+  static const Color textMuted = Color(0xFF7485A0);
+}
+
+class Spacing {
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 24;
+  static const double xxl = 32;
 }
 
 final ThemeData darkTheme = ThemeData(

@@ -43,7 +43,17 @@ class DashboardScreen extends ConsumerWidget {
             Expanded(
               flex: 5,
               child: system == null
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 40),
+                          Icon(Icons.bolt, size: 48, color: GivLocalColors.textMuted.withAlpha(80)),
+                          const SizedBox(height: 16),
+                          Text('Connecting to inverter...', style: TextStyle(color: GivLocalColors.textMuted)),
+                        ],
+                      ),
+                    )
                   : EnergyFlowDiagram(data: system),
             ),
 
