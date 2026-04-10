@@ -140,11 +140,20 @@ class ApiService {
     }
   }
 
-  Future<InverterSetting?> readSetting(String serial, int id) {
-    return _get(
-      '/v1/inverter/$serial/settings/$id/read',
-      (json) => InverterSetting.fromJson(json['data'] as Map<String, dynamic>? ?? json),
-    );
+  Future<InverterSetting?> readSetting(String serial, int id) async {
+    if (connectionState == ConnectionState.disconnected) return null;
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '$_baseUrl/v1/inverter/$serial/settings/$id/read',
+        options: Options(headers: _headers),
+      );
+      final data = response.data;
+      if (data == null) return null;
+      final inner = data['data'] as Map<String, dynamic>? ?? data;
+      return InverterSetting(id: id, name: '', validation: '', value: inner['value']);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<InverterSetting?> writeSetting(
