@@ -144,11 +144,13 @@ from .api.devices import router as devices_router  # noqa: E402
 from .api.inverter_control import router as inverter_control_router  # noqa: E402
 from .api.inverter_data import router as inverter_data_router  # noqa: E402
 from .api.prometheus import router as prometheus_router  # noqa: E402
+from .api.presets import router as presets_router  # noqa: E402
 
 app.include_router(devices_router, prefix="/v1")
 app.include_router(inverter_data_router, prefix="/v1")
 app.include_router(inverter_control_router, prefix="/v1")
 app.include_router(prometheus_router)
+app.include_router(presets_router, prefix="/v1")
 
 
 @app.get("/")
