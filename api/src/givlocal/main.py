@@ -104,10 +104,15 @@ async def lifespan(app: FastAPI):
 
     cloud_data_dir = Path("cloud-data")
     if cloud_data_dir.exists():
-        for settings_file in cloud_data_dir.glob("*.json"):
+        # Deterministic pick: prefer "settings.json" if present, otherwise
+        # the alphabetically-first *.json. `glob` iteration order is
+        # filesystem-dependent, so sort explicitly.
+        candidates = sorted(cloud_data_dir.glob("*.json"))
+        preferred = cloud_data_dir / "settings.json"
+        settings_file = preferred if preferred.exists() else (candidates[0] if candidates else None)
+        if settings_file is not None:
             app_state.settings = load_settings_from_cloud_dump(str(settings_file))
             logger.info("Loaded %d settings from %s", len(app_state.settings), settings_file.name)
-            break
     if not app_state.settings:
         logger.warning("No settings found in cloud-data/. Run cloud_dump --settings-only first.")
 
@@ -160,10 +165,17 @@ app = FastAPI(
 
 from starlette.middleware.cors import CORSMiddleware  # noqa: E402
 
+# CORSMiddleware is attached before lifespan runs, so the origin list is
+# sourced from the GIVENERGY_CORS_ORIGINS env var (comma-separated) rather
+# than config.yaml. Default "*" is fine on a trusted LAN.
+_cors_env = os.environ.get("GIVENERGY_CORS_ORIGINS", "*")
+_cors_origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    # Starlette ignores allow_credentials when allow_origins=["*"]; only
+    # meaningful when a specific origin list is supplied.
+    allow_credentials=_cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

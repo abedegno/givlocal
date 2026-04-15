@@ -94,23 +94,49 @@ class MetricsStore:
         )
         self.conn.commit()
 
-    def query_data_points(self, serial: str, start_ts: int, end_ts: int) -> list[sqlite3.Row]:
-        results: list[sqlite3.Row] = []
-        for table in sorted(self._known_partitions):
-            rows = self.conn.execute(
-                f"""
-                SELECT * FROM {table}
-                WHERE inverter_serial = ?
-                  AND timestamp >= ?
-                  AND timestamp <= ?
-                ORDER BY timestamp
-                """,
+    def _partitions_in_range(self, start_ts: int, end_ts: int) -> list[str]:
+        """Return partitions whose YYYY_MM label overlaps [start_ts, end_ts]."""
+        lo = self._partition_name(start_ts)
+        hi = self._partition_name(end_ts)
+        return sorted(t for t in self._known_partitions if lo <= t <= hi)
+
+    def query_data_points(
+        self,
+        serial: str,
+        start_ts: int,
+        end_ts: int,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[sqlite3.Row]:
+        """Return ordered rows in the range, optionally paginated in SQL."""
+        partitions = self._partitions_in_range(start_ts, end_ts)
+        if not partitions:
+            return []
+        # UNION ALL the relevant partitions and let SQLite do the LIMIT/OFFSET,
+        # so we don't load the whole range into Python just to slice it.
+        union = "\n  UNION ALL\n".join(
+            f"SELECT timestamp, data FROM {t} WHERE inverter_serial = ? AND timestamp BETWEEN ? AND ?"
+            for t in partitions
+        )
+        sql = f"{union}\nORDER BY timestamp"
+        params: list = []
+        for _ in partitions:
+            params += [serial, start_ts, end_ts]
+        if limit is not None:
+            sql += " LIMIT ? OFFSET ?"
+            params += [limit, offset]
+        return self.conn.execute(sql, params).fetchall()
+
+    def count_data_points(self, serial: str, start_ts: int, end_ts: int) -> int:
+        partitions = self._partitions_in_range(start_ts, end_ts)
+        total = 0
+        for t in partitions:
+            row = self.conn.execute(
+                f"SELECT COUNT(*) FROM {t} WHERE inverter_serial = ? AND timestamp BETWEEN ? AND ?",
                 (serial, start_ts, end_ts),
-            ).fetchall()
-            results.extend(rows)
-        # Re-sort across partitions (each partition is already ordered)
-        results.sort(key=lambda r: r["timestamp"])
-        return results
+            ).fetchone()
+            total += row[0]
+        return total
 
     def write_meter_daily(self, serial: str, date: str, **kwargs) -> None:
         columns = ["inverter_serial", "date"] + list(kwargs.keys())

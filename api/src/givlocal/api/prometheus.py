@@ -37,6 +37,22 @@ METRICS = [
     ("givenergy_battery_temp_celsius", "temp_battery"),
 ]
 
+METRIC_HELP: dict[str, str] = {
+    "givenergy_solar_power_watts": "Total PV generation (sum of both strings), W",
+    "givenergy_pv1_power_watts": "PV string 1 instantaneous power, W",
+    "givenergy_pv2_power_watts": "PV string 2 instantaneous power, W",
+    "givenergy_grid_power_watts": "Grid power (positive = export, negative = import), W",
+    "givenergy_battery_power_watts": "Battery power (positive = discharging), W",
+    "givenergy_battery_percent": "Battery state of charge, %",
+    "givenergy_consumption_watts": "House load demand, W",
+    "givenergy_inverter_power_watts": "Inverter AC output power, W",
+    "givenergy_ac_voltage": "Grid AC voltage, V",
+    "givenergy_ac_frequency_hz": "Grid AC frequency, Hz",
+    "givenergy_battery_voltage": "Battery pack voltage, V",
+    "givenergy_inverter_temp_celsius": "Inverter heatsink temperature, °C",
+    "givenergy_battery_temp_celsius": "Battery temperature, °C",
+}
+
 
 @router.get("/metrics", response_class=PlainTextResponse, dependencies=[Depends(_optional_auth)])
 async def prometheus_metrics():
@@ -48,7 +64,13 @@ async def prometheus_metrics():
     """
     from givlocal.main import app_state
 
-    lines = []
+    lines: list[str] = []
+    # Emit HELP/TYPE once per metric at the top so scrapers can annotate.
+    for metric_name, _registers in ((m[0], m[1:]) for m in METRICS):
+        help_text = METRIC_HELP.get(metric_name, metric_name)
+        lines.append(f"# HELP {metric_name} {help_text}")
+        lines.append(f"# TYPE {metric_name} gauge")
+
     for serial, inv_state in app_state.inverters.items():
         inverter = inv_state.plant.inverter
         for entry in METRICS:

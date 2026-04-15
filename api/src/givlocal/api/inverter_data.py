@@ -72,17 +72,17 @@ async def data_points(
     start_ts = int(start_dt.timestamp())
     end_ts = int(end_dt.timestamp())
 
-    rows = app_state.metrics_store.query_data_points(serial, start_ts, end_ts)
+    total = app_state.metrics_store.count_data_points(serial, start_ts, end_ts)
+    offset = (page - 1) * pageSize
+    rows = app_state.metrics_store.query_data_points(serial, start_ts, end_ts, limit=pageSize, offset=offset)
     items = [transform_data_point(row["timestamp"], json.loads(row["data"])) for row in rows]
-
-    total = len(items)
-    start_idx = (page - 1) * pageSize
-    page_items = items[start_idx : start_idx + pageSize]
+    last_page = max(1, (total + pageSize - 1) // pageSize)
 
     return {
-        "data": page_items,
+        "data": items,
         "meta": {
             "current_page": page,
+            "last_page": last_page,
             "total": total,
             "per_page": pageSize,
         },
@@ -178,7 +178,7 @@ async def inverter_health(serial: str):
         _check("Grid Frequency", "f_ac1", "Hz", low=49.5, high=50.5),
         _check("Inverter Temperature", "temp_inverter_heatsink", "°C", high=60),
         _check("Battery Temperature", "temp_battery", "°C", low=5, high=45),
-        _check("Battery Percent", "battery_percent", "%", low=10),
+        _check("Battery Percent", "battery_percent", "%", low=5),
         _check("Solar Generation", "p_pv1", "W"),
         _check("Consumption", "p_load_demand", "W"),
     ]
