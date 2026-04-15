@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-router = APIRouter(tags=["Inverter Control"])
+from givlocal.api.dependencies import require_auth
+
+logger = logging.getLogger(__name__)
+
+# All control endpoints can write holding registers or expose setting values,
+# so the whole router requires a valid bearer token.
+router = APIRouter(tags=["Inverter Control"], dependencies=[Depends(require_auth)])
 
 
 class WriteSettingRequest(BaseModel):
@@ -74,5 +82,12 @@ async def write_inverter_setting(serial: str, setting_id: int, body: WriteSettin
     try:
         await inv_state.client.execute([request], timeout=3.0, retries=1)
     except Exception as exc:
-        return {"data": {"value": body.value, "success": False, "message": str(exc)}}
+        logger.exception("Setting write failed for %s setting=%s", serial, setting_id)
+        return {
+            "data": {
+                "value": body.value,
+                "success": False,
+                "message": f"{type(exc).__name__}: write failed (see server logs)",
+            }
+        }
     return {"data": {"value": body.value, "success": True, "message": "Written Successfully"}}

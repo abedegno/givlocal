@@ -15,6 +15,11 @@ class MetricsStore:
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        # WAL + busy_timeout: concurrent readers during the poller's writes
+        # no longer raise "database is locked".
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA synchronous=NORMAL")
+        self.conn.execute("PRAGMA busy_timeout=5000")
         self._known_partitions: set[str] = set()
         self._create_meter_daily_table()
         self._discover_partitions()

@@ -23,21 +23,48 @@ class InverterManager:
         """Connect to each inverter, run detect_plant, populate self.inverters keyed by serial."""
         for cfg in configs:
             try:
-                client = Client(host=cfg.host, port=cfg.port, connect_timeout=10.0)
-                await client.connect()
-                await client.detect_plant(timeout=5.0, retries=2)
-                serial = client.plant.inverter_serial_number
-                state = InverterState(
-                    serial=serial,
-                    host=cfg.host,
-                    port=cfg.port,
-                    plant=client.plant,
-                    client=client,
-                )
-                self.inverters[serial] = state
-                self._clients.append(client)
+                state = await self._connect_one(cfg.host, cfg.port)
+                self.inverters[state.serial] = state
             except Exception as e:
                 logger.error("Failed to connect to %s:%d: %s", cfg.host, cfg.port, e)
+
+    async def _connect_one(self, host: str, port: int) -> InverterState:
+        client = Client(host=host, port=port, connect_timeout=10.0)
+        await client.connect()
+        await client.detect_plant(timeout=5.0, retries=2)
+        serial = client.plant.inverter_serial_number
+        self._clients.append(client)
+        return InverterState(
+            serial=serial,
+            host=host,
+            port=port,
+            plant=client.plant,
+            client=client,
+        )
+
+    async def reconnect(self, state: InverterState) -> bool:
+        """Tear down and re-establish a single inverter's session. Returns True on success."""
+        old = state.client
+        if old is not None:
+            try:
+                await old.close()
+            except Exception:
+                pass
+            try:
+                self._clients.remove(old)
+            except ValueError:
+                pass
+        try:
+            fresh = await self._connect_one(state.host, state.port)
+        except Exception as e:
+            logger.warning("Reconnect to %s (%s:%d) failed: %s", state.serial, state.host, state.port, e)
+            return False
+        # Swap in the new session. Keep the same InverterState object so that
+        # any code holding a reference (HTTP handlers, poller) sees the update.
+        state.client = fresh.client
+        state.plant = fresh.plant
+        logger.info("Reconnected to %s", state.serial)
+        return True
 
     async def close_all(self) -> None:
         """Close all open client connections and clear state."""

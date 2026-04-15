@@ -27,6 +27,8 @@ class InverterState:
     port: int
     plant: Optional[object] = None
     client: Optional[object] = None
+    last_poll_ok_at: float = 0.0
+    consecutive_failures: int = 0
 
 
 @dataclass
@@ -116,6 +118,7 @@ async def lifespan(app: FastAPI):
             app_state.metrics_store,
             interval=config.poll_interval if config else 30,
             full_refresh_interval=config.full_refresh_interval if config else 300,
+            reconnect=manager.reconnect,
         )
     )
 
@@ -167,3 +170,22 @@ app.include_router(presets_router, prefix="/v1")
 async def root():
     """Health-check / discovery endpoint."""
     return {"name": "GivLocal API", "version": "0.1.0"}
+
+
+@app.get("/health")
+async def health():
+    """Per-inverter liveness: last successful poll and failure streak."""
+    import time as _time
+
+    now = _time.time()
+    inverters = [
+        {
+            "serial": s.serial,
+            "host": s.host,
+            "last_poll_ok_age_s": (now - s.last_poll_ok_at) if s.last_poll_ok_at else None,
+            "consecutive_failures": s.consecutive_failures,
+        }
+        for s in app_state.inverters.values()
+    ]
+    all_healthy = all(i["last_poll_ok_age_s"] is not None and i["last_poll_ok_age_s"] < 120 for i in inverters)
+    return {"ok": all_healthy, "inverters": inverters}

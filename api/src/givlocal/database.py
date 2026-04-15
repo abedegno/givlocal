@@ -54,11 +54,22 @@ CREATE TABLE IF NOT EXISTS preset_profiles (
 """
 
 
+def _tune_connection(conn: sqlite3.Connection) -> None:
+    """Apply pragmas that make SQLite safe under concurrent readers/writers."""
+    # WAL lets readers and a single writer proceed without blocking each other.
+    # busy_timeout means SQLITE_BUSY is retried internally instead of surfacing
+    # as "database is locked" under contention.
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+
+
 def init_app_db(db_path: str, check_same_thread: bool = False) -> sqlite3.Connection:
     """Create (or open) the app database, apply schema, and return the connection."""
     path = Path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path, check_same_thread=check_same_thread)
+    _tune_connection(conn)
     conn.executescript(APP_SCHEMA)
     conn.commit()
     return conn
