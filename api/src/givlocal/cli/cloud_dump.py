@@ -34,24 +34,39 @@ RATE_LIMIT_PAUSE = 2  # seconds between paginated requests
 
 
 class RateLimiter:
-    """Sliding-window limiter: at most `max_per_min` acquisitions per 60s."""
+    """Sliding-window limiter with a shared backoff gate.
+
+    At most `max_per_min` acquisitions per 60s. On 429, callers invoke
+    `pause(seconds)` to force all threads to sleep past a shared deadline
+    and clear the window, preventing thundering-herd retries.
+    """
 
     def __init__(self, max_per_min: int):
         self.max = max_per_min
         self.times: deque = deque()
         self.lock = threading.Lock()
+        self.pause_until: float = 0.0
 
     def acquire(self):
         while True:
             with self.lock:
                 now = time.monotonic()
-                while self.times and now - self.times[0] >= 60:
-                    self.times.popleft()
-                if len(self.times) < self.max:
-                    self.times.append(now)
-                    return
-                wait = 60 - (now - self.times[0]) + 0.01
+                if now < self.pause_until:
+                    wait = self.pause_until - now
+                else:
+                    while self.times and now - self.times[0] >= 60:
+                        self.times.popleft()
+                    if len(self.times) < self.max:
+                        self.times.append(now)
+                        return
+                    wait = 60 - (now - self.times[0]) + 0.01
             time.sleep(wait)
+
+    def pause(self, seconds: float):
+        """Block all callers for `seconds` and clear the request window."""
+        with self.lock:
+            self.pause_until = max(self.pause_until, time.monotonic() + seconds)
+            self.times.clear()
 
 
 class CloudDumper:
@@ -71,23 +86,24 @@ class CloudDumper:
         self.count_lock = threading.Lock()
         self.inverter_serials: list[str] = []
         self.workers = max(1, workers)
-        self.limiter = RateLimiter(rate_per_min) if workers > 1 else None
+        # Clamp rate to the API's documented hard limit of 300/min.
+        self.limiter = RateLimiter(min(max(1, rate_per_min), 300))
 
-    def _get(self, path: str, params: dict = None) -> dict | None:
+    def _get(self, path: str, params: dict = None, _retries: int = 2) -> dict | None:
         url = f"{BASE_URL}{path}"
-        if self.limiter:
-            self.limiter.acquire()
+        self.limiter.acquire()
         with self.count_lock:
             self.request_count += 1
         try:
             resp = self.session.get(url, params=params, timeout=30)
-            if resp.status_code == 429:
-                print("  Rate limited. Waiting 60s...")
-                time.sleep(60)
-                resp = self.session.get(url, params=params, timeout=30)
-            if resp.status_code == 200:
-                return resp.json()
-            elif resp.status_code == 201:
+            if resp.status_code == 429 and _retries > 0:
+                # Shared pause: all threads honor the backoff, and the
+                # rate-limiter window is cleared so we don't stampede
+                # the API the moment the sleep ends.
+                print("  Rate limited (429). All workers pausing 60s...")
+                self.limiter.pause(60)
+                return self._get(path, params=params, _retries=_retries - 1)
+            if resp.status_code in (200, 201):
                 return resp.json()
             else:
                 print(f"  WARNING: {path} returned {resp.status_code}: {resp.text[:200]}")
@@ -203,15 +219,23 @@ class CloudDumper:
         if data:
             self._save(f"inverters/{serial}/health.json", data)
 
-    def _fetch_day(self, serial: str, date_str: str) -> list:
+    def _fetch_day(self, serial: str, date_str: str) -> tuple[list, bool]:
+        """Fetch all paginated points for a single day.
+
+        Returns (points, ok). `ok` is False if any page fetch failed
+        (None response), so the caller can distinguish "empty day" from
+        "partial fetch" and surface it as a warning.
+        """
         day_points: list = []
         page = 1
+        ok = True
         while True:
             data = self._get(
                 f"/inverter/{serial}/data-points/{date_str}",
                 params={"page": page, "pageSize": 100},
             )
-            if not data:
+            if data is None:
+                ok = False
                 break
             points = data.get("data", [])
             if not points:
@@ -222,26 +246,32 @@ class CloudDumper:
             if page >= last_page:
                 break
             page += 1
-            if not self.limiter:
-                time.sleep(0.3)
-        return day_points
+        return day_points, ok
 
     def dump_data_points(self, serial: str, days: int = 365):
         print(f"\n  [{serial}] Historical data points (last {days} days, {self.workers} workers)...")
         today = datetime.now().date()
         dates = [(today - timedelta(days=i)).isoformat() for i in range(days)]
         results: dict[str, list] = {}
+        checkpoint_lock = threading.Lock()
+
+        def checkpoint():
+            flat = [p for d in dates for p in results.get(d, [])]
+            self._save(f"inverters/{serial}/data_points.json", flat)
 
         if self.workers == 1:
             for i, date_str in enumerate(dates):
-                points = self._fetch_day(serial, date_str)
+                points, ok = self._fetch_day(serial, date_str)
                 results[date_str] = points
+                if not ok:
+                    print(f"    WARNING: {date_str} fetch incomplete (partial or failed)")
+                elif not points:
+                    print(f"    NOTE: {date_str} returned 0 points")
                 if (i + 1) % 30 == 0 or i == 0:
                     total = sum(len(v) for v in results.values())
                     print(f"    {date_str}: {len(points)} points (total: {total})")
                 if (i + 1) % 30 == 0:
-                    flat = [p for d in dates[: i + 1] for p in results.get(d, [])]
-                    self._save(f"inverters/{serial}/data_points.json", flat)
+                    checkpoint()
         else:
             completed = 0
             with ThreadPoolExecutor(max_workers=self.workers) as pool:
@@ -249,7 +279,12 @@ class CloudDumper:
                 for fut in as_completed(future_to_date):
                     d = future_to_date[fut]
                     try:
-                        results[d] = fut.result()
+                        points, ok = fut.result()
+                        results[d] = points
+                        if not ok:
+                            print(f"    WARNING: {d} fetch incomplete (partial or failed)")
+                        elif not points:
+                            print(f"    NOTE: {d} returned 0 points")
                     except Exception as e:
                         print(f"    ERROR fetching {d}: {e}")
                         results[d] = []
@@ -257,10 +292,13 @@ class CloudDumper:
                     if completed % 30 == 0 or completed == 1:
                         total = sum(len(v) for v in results.values())
                         print(f"    {completed}/{days} days done ({d}: {len(results[d])}, total: {total})")
+                    if completed % 30 == 0:
+                        with checkpoint_lock:
+                            checkpoint()
 
-        all_points = [p for d in dates for p in results.get(d, [])]
-        self._save(f"inverters/{serial}/data_points.json", all_points)
-        print(f"    Total: {len(all_points)} data points")
+        checkpoint()
+        total_points = sum(len(v) for v in results.values())
+        print(f"    Total: {total_points} data points")
 
     def dump_sites(self):
         print("\n[6/7] Sites...")
@@ -358,7 +396,7 @@ def main():
         "--rate",
         type=int,
         default=250,
-        help="Max API req/min when parallel (default: 250, cap 300)",
+        help="Max API req/min (default: 250, clamped to API limit of 300)",
     )
     parser.add_argument(
         "--settings-only",
