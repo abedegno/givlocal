@@ -157,15 +157,21 @@ class MetricsStore:
     def list_partitions(self) -> list[str]:
         return sorted(self._known_partitions)
 
-    def apply_retention(self, months: int) -> None:
+    def apply_retention(self, months: int, reference: datetime | None = None) -> None:
+        """Drop partitions older than `months` before the reference point.
+
+        `reference` defaults to the newest partition (useful for tests with
+        historical fixture data); production callers should pass
+        `datetime.now(tz=timezone.utc)` so retention tracks wall-clock time.
+        """
         if not self._known_partitions:
             return
-        # Base the cutoff on the most recent partition, not wall-clock time,
-        # so tests with historical data work correctly.
-        newest = sorted(self._known_partitions)[-1]
-        # Extract year/month from "data_points_YYYY_MM"
-        parts = newest.split("_")
-        ref_year, ref_month = int(parts[2]), int(parts[3])
+        if reference is not None:
+            ref_year, ref_month = reference.year, reference.month
+        else:
+            newest = sorted(self._known_partitions)[-1]
+            parts = newest.split("_")
+            ref_year, ref_month = int(parts[2]), int(parts[3])
         cutoff_month = ref_month - months
         cutoff_year = ref_year
         while cutoff_month <= 0:

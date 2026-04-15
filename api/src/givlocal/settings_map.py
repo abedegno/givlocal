@@ -154,17 +154,17 @@ def get_hr_index(setting: dict) -> int | None:
         return None
     try:
         from givenergy_modbus_async.model.inverter import BaseInverter
-
-        lut = BaseInverter.REGISTER_LUT
-        rd = lut.get(register)
-        if rd is None:
-            return None
-        registers = rd.registers
-        if not registers:
-            return None
-        return registers[0]._idx
-    except Exception:
+    except ImportError:
         return None
+
+    lut = BaseInverter.REGISTER_LUT
+    rd = lut.get(register)
+    if rd is None:
+        return None
+    registers = rd.registers
+    if not registers:
+        return None
+    return registers[0]._idx
 
 
 def validate_setting_value(setting: dict, value: Any) -> bool:

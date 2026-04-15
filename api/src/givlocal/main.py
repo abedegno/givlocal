@@ -5,49 +5,20 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from typing import Optional
 
 from fastapi import FastAPI
 
 from givlocal.auth import TokenStore, generate_token
-from givlocal.config import AppConfig, load_config
+from givlocal.config import load_config
 from givlocal.database import init_app_db
 from givlocal.metrics_store import MetricsStore
+from givlocal.state import AppState, InverterState, app_state  # re-exported
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class InverterState:
-    """Runtime state for a connected inverter."""
-
-    serial: str
-    host: str
-    port: int
-    plant: Optional[object] = None
-    client: Optional[object] = None
-    last_poll_ok_at: float = 0.0
-    consecutive_failures: int = 0
-
-
-@dataclass
-class AppState:
-    """Global application state shared across request handlers."""
-
-    config: Optional[AppConfig] = None
-    token_store: Optional[TokenStore] = None
-    metrics_store: Optional[MetricsStore] = None
-    # Shared sqlite connection for the app DB. Routes should use this rather
-    # than reaching into TokenStore._conn.
-    app_db: Optional[object] = None
-    inverters: dict[str, InverterState] = field(default_factory=dict)
-    settings: dict = field(default_factory=dict)
-    auth_required: bool = True
-    prometheus_auth_required: bool = True
-
-
-app_state = AppState()
+# Silence F401: these are re-exported for back-compat with existing callers
+# that still do `from givlocal.main import InverterState`.
+__all__ = ["AppState", "InverterState", "app", "app_state"]
 
 
 @asynccontextmanager

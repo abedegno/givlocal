@@ -10,7 +10,7 @@ import time
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from givlocal.api.dependencies import require_auth
+from givlocal.api.dependencies import require_auth, require_scope
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,10 @@ async def read_inverter_setting(serial: str, setting_id: int):
     return {"data": {"value": display_value}}
 
 
-@router.post("/inverter/{serial}/settings/{setting_id}/write")
+@router.post(
+    "/inverter/{serial}/settings/{setting_id}/write",
+    dependencies=[Depends(require_scope("write"))],
+)
 async def write_inverter_setting(serial: str, setting_id: int, body: WriteSettingRequest):
     from givenergy_modbus_async.pdu import WriteHoldingRegisterRequest
 

@@ -6,8 +6,8 @@ import asyncio
 import logging
 import time
 
-from .main import InverterState
 from .metrics_store import MetricsStore
+from .state import InverterState
 
 logger = logging.getLogger(__name__)
 

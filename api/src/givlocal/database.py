@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS api_tokens (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     name         TEXT,
     token_hash   TEXT UNIQUE NOT NULL,
+    scope        TEXT NOT NULL DEFAULT 'admin',  -- read | write | admin
     created_at   TEXT DEFAULT (datetime('now')),
     last_used_at TEXT
 );
@@ -64,6 +65,14 @@ def _tune_connection(conn: sqlite3.Connection) -> None:
     conn.execute("PRAGMA busy_timeout=5000")
 
 
+def _migrate_api_tokens_scope(conn: sqlite3.Connection) -> None:
+    """Back-fill: add api_tokens.scope for databases created before scopes existed."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(api_tokens)").fetchall()}
+    if "scope" not in cols:
+        conn.execute("ALTER TABLE api_tokens ADD COLUMN scope TEXT NOT NULL DEFAULT 'admin'")
+        conn.commit()
+
+
 def init_app_db(db_path: str, check_same_thread: bool = False) -> sqlite3.Connection:
     """Create (or open) the app database, apply schema, and return the connection."""
     path = Path(db_path)
@@ -71,5 +80,6 @@ def init_app_db(db_path: str, check_same_thread: bool = False) -> sqlite3.Connec
     conn = sqlite3.connect(db_path, check_same_thread=check_same_thread)
     _tune_connection(conn)
     conn.executescript(APP_SCHEMA)
+    _migrate_api_tokens_scope(conn)
     conn.commit()
     return conn

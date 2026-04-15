@@ -12,6 +12,9 @@ def transform_meter_data(inv) -> dict:
     e_pv1_day = inv.get("e_pv1_day") or 0.0
     e_pv2_day = inv.get("e_pv2_day") or 0.0
 
+    # Use the "_2" variants: on current firmware the original
+    # e_battery_*_total registers are unreliable (latched / reset on reboot);
+    # the "_2" variants are the post-firmware-fix high-resolution totals.
     e_battery_charge_total = inv.get("e_battery_charge_total_2")
     e_battery_discharge_total = inv.get("e_battery_discharge_total_2")
 

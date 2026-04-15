@@ -1,6 +1,12 @@
 """Transform an Inverter model into the GivEnergy Cloud /system-data-latest shape."""
 
+import logging
+
 _STATUS_MAP = {0: "Waiting", 1: "Normal", 2: "Warning", 3: "Fault", 4: "Updating"}
+# Track status codes we've already warned about so a single unexpected value
+# doesn't spam the log every poll.
+_UNKNOWN_STATUS_SEEN: set[int] = set()
+_logger = logging.getLogger(__name__)
 
 
 def transform_system_data(inv) -> dict:
@@ -15,7 +21,12 @@ def transform_system_data(inv) -> dict:
 
     status_raw = inv.get("status")
     status_int = int(status_raw) if status_raw is not None else 0
-    status = _STATUS_MAP.get(status_int, "Unknown")
+    status = _STATUS_MAP.get(status_int)
+    if status is None:
+        if status_int not in _UNKNOWN_STATUS_SEEN:
+            _UNKNOWN_STATUS_SEEN.add(status_int)
+            _logger.warning("Unknown inverter status code %d (adding to cache)", status_int)
+        status = "Unknown"
 
     p_pv1 = inv.get("p_pv1") or 0
     p_pv2 = inv.get("p_pv2") or 0

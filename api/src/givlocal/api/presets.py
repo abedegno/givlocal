@@ -7,7 +7,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from givlocal.api.dependencies import require_auth
+from givlocal.api.dependencies import require_auth, require_scope
 
 router = APIRouter(tags=["Preset Profiles"])
 
@@ -58,7 +58,11 @@ async def list_preset_profiles(serial: str):
     return {"data": data}
 
 
-@router.post("/inverter/{serial}/preset-profile", status_code=201, dependencies=[Depends(require_auth)])
+@router.post(
+    "/inverter/{serial}/preset-profile",
+    status_code=201,
+    dependencies=[Depends(require_scope("write"))],
+)
 async def create_preset_profile(serial: str, body: CreateProfileRequest):
     """Create a new preset profile for the given inverter."""
     from givlocal.main import app_state
@@ -75,7 +79,10 @@ async def create_preset_profile(serial: str, body: CreateProfileRequest):
     return {"data": {"id": cursor.lastrowid, "name": body.name}}
 
 
-@router.delete("/inverter/{serial}/preset-profile", dependencies=[Depends(require_auth)])
+@router.delete(
+    "/inverter/{serial}/preset-profile",
+    dependencies=[Depends(require_scope("write"))],
+)
 async def delete_preset_profile(serial: str, body: DeleteProfileRequest):
     """Delete a preset profile by ID."""
     from givlocal.main import app_state

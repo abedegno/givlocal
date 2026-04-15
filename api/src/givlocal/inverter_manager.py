@@ -7,7 +7,7 @@ import logging
 from givenergy_modbus_async.client.client import Client
 
 from .config import InverterConfig
-from .main import InverterState
+from .state import InverterState
 
 logger = logging.getLogger(__name__)
 
