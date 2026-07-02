@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_riverpod: ^2.6.1
-  dio: ^5.7.0
+  dio: ^5.10.0
   fl_chart: ^0.70.2
   shared_preferences: ^2.3.4
   go_router: ^14.8.1
